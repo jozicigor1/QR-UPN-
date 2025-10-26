@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UPN QR Generator</title>
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--accent:#22d3ee;--ok:#10b981;--err:#ef4444;}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;background:linear-gradient(120deg,#0f172a,#020617);color:#fff}
+    .wrap{min-height:100dvh;display:flex;justify-content:center;padding:24px}
+    .container{width:100%;max-width:980px;display:grid;gap:16px}
+    header{display:flex;gap:12px;align-items:center;word-break:break-word}
+    .logo{width:56px;height:56px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#0891b2);color:#00151a;font-weight:800;flex:none}
+    h1{font-size:clamp(22px,3vw,34px);margin:0 0 8px 0}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+    .grid{display:grid;gap:10px;grid-template-columns:1fr}
+    .row{display:grid;gap:10px;grid-template-columns:1fr}
+    @media(min-width:720px){.row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    label{font-size:13px;color:#cbd5e1;display:block;word-break:break-word}
+    input,select,button,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;outline:none;min-width:0}
+    input::placeholder{color:#64748b}
+    input.err,select.err{border-color:var(--err);box-shadow:0 0 0 1px var(--err)}
+    .card{background:rgba(255,255,255,0.02);border:1px solid rgba(148,163,184,0.14);border-radius:16px;padding:16px;overflow:hidden}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{border:1px solid #1f2937;background:#0b1220;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,#0891b2,#22d3ee);color:#00151a;border:0;font-weight:700}
+    .btn.ghost{background:transparent;border:1px solid #334155}
+    .muted{color:var(--muted);font-size:12px;word-break:break-word}
+    .qrbox{display:grid;gap:10px;place-items:center;padding:16px;border-radius:16px;background:#020617;border:1px dashed #334155;min-height:360px}
+    canvas{image-rendering:pixelated;background:#fff;border-radius:8px;max-width:100%;height:auto}
+    .ok{color:var(--ok)} .err{color:var(--err)}
+    .switch{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px}
+    .switch > label{white-space:normal;overflow-wrap:break-word}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="container">
+    <header>
+      <div class="logo" aria-hidden="true">QR</div>
+      <div>
+        <h1>UPN QR Generator</h1>
+        <div class="sub">UPN QR (ECC=M, v=15). Šumniki se samodejno pretvorijo. Brez roka plačila.</div>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="grid">
+        <div class="row">
+          <div>
+            <label>Prejemnik – naziv</label>
+            <input id="ime_prejemnika" placeholder="Janez Novak">
+          </div>
+          <div>
+            <label>Prejemnik – ulica in št.</label>
+            <input id="ulica_prejemnika" placeholder="Glavna cesta 10">
+          </div>
+          <div>
+            <label>Prejemnik – kraj (pošta in mesto)</label>
+            <input id="kraj_prejemnika" placeholder="1000 Ljubljana">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>IBAN prejemnika</label>
+            <input id="IBAN_prejemnika" placeholder="SI56 0000 0000 0000 000">
+          </div>
+          <div>
+            <label>Koda namena</label>
+            <select id="koda_namena">
+              <option value="">-- izberi --</option>
+              <option>OTHR</option><option>SUPP</option><option>TELE</option><option>INTE</option><option>SECU</option>
+              <option>TRAD</option><option>RENT</option><option>SALA</option><option>TAXS</option><option>HLTC</option>
+              <option>ELEC</option><option>GASB</option><option>WTER</option><option>TRPT</option><option>GOVT</option>
+              <option>CHAR</option><option>EDUC</option><option>BENE</option><option>LIFI</option><option>INSU</option>
+            </select>
+          </div>
+          <div>
+            <label>Znesek (€)</label>
+            <input id="znesek" type="number" step="0.01" placeholder="npr. 29.90">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Namen plačila</label>
+            <input id="namen_placila" placeholder="Storitev / izdelek">
+          </div>
+          <div class="switch">
+            <input type="checkbox" id="auto_ref">
+            <label for="auto_ref">Dodaj samodejno referenco (SI00YYYYMMDDhhmm)</label>
+          </div>
+          <div>
+            <label>Referenca (ročno, če ne označiš samodejne)</label>
+            <input id="manual_ref" placeholder="pusti prazno za brez reference">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btn-gen">Ustvari kodo</button>
+          <button class="btn ghost" id="btn-clear">Počisti</button>
+        </div>
+        <div class="muted">Vsa polja so obvezna, razen reference. Če je vključena samodejna referenca, ročni vnos se ignorira.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="qrbox">
+        <canvas id="qr" width="300" height="300"></canvas>
+        <div id="status" class="muted">Še ni generirano.</div>
+      </div>
+    </section>
+
+    <footer class="muted">
+      Uporablja <code>upnqr</code> + <code>qrcode</code>. Parametri: ECC=M, version=15.
+    </footer>
+  </div>
+</div>
+
+<script type="module">
+import { encode as upnEncode } from 'https://cdn.jsdelivr.net/npm/upnqr@1.2.2/+esm';
+import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
+
+const $ = (id)=>document.getElementById(id);
+const normalizeIBAN = (iban)=>iban.replace(/\s+/g,'').toUpperCase();
+const pad=(n)=>String(n).padStart(2,'0');
+const dateStr=(d)=>`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+const removeDiacritics=(s)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[čć]/gi,'c').replace(/[š]/gi,'s').replace(/[ž]/gi,'z');
+
+function ibanIsValid(ibanRaw){
+  let iban = normalizeIBAN(ibanRaw);
+  if(!/^SI[0-9A-Z]{17}$/.test(iban)) return false;
+  const rearranged = iban.slice(4) + iban.slice(0,4);
+  let total='';
+  for(let i=0;i<rearranged.length;i++){
+    const ch=rearranged[i];
+    if(ch>='A'&&ch<='Z'){ total+=(ch.charCodeAt(0)-55); } else { total+=ch; }
+    if(total.length>9){ total=String(parseInt(total,10)%97); }
+  }
+  return parseInt(total,10)%97===1;
+}
+
+function validate(){
+  let ok=true;
+  const ids=['ime_prejemnika','ulica_prejemnika','kraj_prejemnika','IBAN_prejemnika','namen_placila','znesek'];
+  ids.forEach(id=>{
+    const el=$(id); const val=el.value.trim();
+    let invalid=!val||(id==='znesek'&&!(parseFloat(val)>0));
+    if(id==='IBAN_prejemnika'&&val) invalid=!ibanIsValid(val);
+    el.classList.toggle('err',invalid); if(invalid) ok=false;
+  });
+  const sel=$('koda_namena'); if(!sel.value){sel.classList.add('err'); ok=false;} else sel.classList.remove('err');
+  return ok;
+}
+
+async function generate(){
+  const status=$('status');
+  if(!validate()){ status.innerHTML='<span class="err">Preveri polja (IBAN, znesek, koda namena).</span>'; return; }
+  try{
+    const d=new Date();
+    const ref = $('auto_ref').checked ? ('SI00'+dateStr(d)+pad(d.getHours())+pad(d.getMinutes())) : $('manual_ref').value.trim();
+
+    const upn={
+      polog:false,dvig:false,
+      ime_placnika:'',ulica_placnika:'',kraj_placnika:'',
+      znesek:parseFloat($('znesek').value).toFixed(2),
+      nujno:false,
+      koda_namena:$('koda_namena').value,
+      namen_placila:removeDiacritics($('namen_placila').value.trim()),
+      IBAN_prejemnika:normalizeIBAN($('IBAN_prejemnika').value),
+      referenca_prejemnika:ref,
+      ime_prejemnika:removeDiacritics($('ime_prejemnika').value.trim()),
+      ulica_prejemnika:removeDiacritics($('ulica_prejemnika').value.trim()),
+      kraj_prejemnika:removeDiacritics($('kraj_prejemnika').value.trim())
+    };
+
+    const payload=upnEncode(upn);
+    const canvas=$('qr');
+    await QRCode.toCanvas(canvas,payload,{errorCorrectionLevel:'M',version:15,margin:4,scale:8,width:300});
+    status.innerHTML='<span class="ok">✅ QR koda uspešno ustvarjena.</span>';
+  }catch(e){
+    console.error(e);
+    status.innerHTML='<span class="err">Napaka: '+(e?.message||e)+'</span>';
+  }
+}
+
+function clearForm(){
+  ['ime_prejemnika','ulica_prejemnika','kraj_prejemnika','IBAN_prejemnika','namen_placila','znesek','manual_ref'].forEach(id=>{
+    const el=$(id); el.value=''; el.classList.remove('err');
+  });
+  $('koda_namena').value=''; $('auto_ref').checked=false;
+  const ctx=$('qr').getContext('2d'); ctx.clearRect(0,0,$('qr').width,$('qr').height);
+  $('status').textContent='Počistil.';
+}
+
+$('btn-gen').addEventListener('click',generate);
+$('btn-clear').addEventListener('click',clearForm);
+</script>
+</body>
+</html>
