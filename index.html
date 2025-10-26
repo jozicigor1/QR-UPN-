@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UPN QR – končna verzija</title>
+  <style>
+    :root {--bg:#0b1220;--card:#0f172a;--muted:#94a3b8;--accent:#22d3ee;--ok:#10b981;--err:#ef4444;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;background:var(--bg);color:#e5e7eb}
+    .wrap{min-height:100dvh;display:grid;grid-template-rows:auto 1fr auto}
+    header{padding:16px;display:flex;gap:12px;align-items:center;background:linear-gradient(120deg,#0b1220,#0a1a2c)}
+    .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#0891b2);display:grid;place-items:center;font-weight:800;color:#00222a}
+    h1{font-size:18px;margin:0}
+    .sub{color:#94a3b8;font-size:12px;margin-top:4px}
+    main{padding:14px;display:grid;gap:12px}
+    .card{background:#0c1526;border:1px solid #1f2b3d;border-radius:14px;padding:12px}
+    label{font-size:12px;color:#b7c3d1;display:block;margin-bottom:6px}
+    input,select,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #233041;background:#0a1728;color:#e6eef6;font-size:16px;transition:all .2s}
+    input::placeholder{color:#7088a1}
+    input.error{border-color:var(--err);background:#200}
+    input.success{border-color:var(--ok);background:#04150c}
+    .feedback{font-size:11px;margin-top:3px}
+    .errText{color:var(--err)}
+    .okText{color:var(--ok)}
+    .row{display:grid;gap:10px}
+    @media(min-width:720px){.row.cols-3{grid-template-columns:repeat(3,1fr)}}
+    .btn.primary{background:linear-gradient(90deg,#0891b2,#22d3ee);color:#00151a;border:0;font-weight:800}
+    .btn.ghost{background:transparent;border:1px solid #334155}
+    .qrbox{display:grid;gap:10px;place-items:center;padding:12px;border-radius:12px;background:#071324;border:2px solid var(--accent);width:90vw;max-width:400px;aspect-ratio:1/1;margin:auto}
+    canvas{width:100%;height:100%;background:#fff;border-radius:8px;image-rendering:pixelated}
+    .ok{color:var(--ok)} .err{color:var(--err);font-size:12px;margin-top:2px}
+    .checkbox-field{border:1px solid #233041;background:#0a1728;border-radius:12px;padding:10px 14px;margin-top:8px;display:flex;align-items:center;gap:10px;color:#b7c3d1;font-size:14px}
+    .checkbox-field input{width:20px;height:20px;margin:0}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">UPN</div>
+    <div>
+      <h1>UPN QR – končna verzija</h1>
+      <div class="sub">Ročni ali brez sklica · lokalno delovanje</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3 class="muted">Prejemnik</h3>
+      <div class="row cols-3">
+        <div><label>Ime/naziv</label><input id="ime_prejemnika" placeholder="npr. Janez Novak"><div id="f_ime" class="feedback"></div></div>
+        <div><label>Ulica in št.</label><input id="ulica_prejemnika" placeholder="npr. Novakova ulica 1"><div id="f_ulica" class="feedback"></div></div>
+        <div><label>Kraj</label><input id="kraj_prejemnika" placeholder="npr. 1000 Ljubljana"><div id="f_kraj" class="feedback"></div></div>
+      </div>
+      <div class="row cols-3" style="margin-top:10px">
+        <div><label>IBAN</label><input id="IBAN_prejemnika" placeholder="npr. SI56040000282316016"><div id="f_iban" class="feedback"></div></div>
+        <div>
+          <label>Referenca (sklic)</label>
+          <input id="referenca_prejemnika" placeholder="npr. SI00202510260001">
+          <div id="f_ref" class="feedback"></div>
+          <div class="checkbox-field"><input type="checkbox" id="noRef"><span>Brez reference</span></div>
+        </div>
+        <div>
+          <label>Koda namena</label>
+          <select id="koda_namena">
+            <option value="" selected>— izberi —</option>
+            <option>OTHR</option><option>RENT</option><option>ELEC</option><option>TAXS</option>
+            <option>TUIT</option><option>INSU</option><option>GDSV</option><option>SUPP</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 class="muted">Plačilo</h3>
+      <div class="row cols-3">
+        <div><label>Namen plačila</label><input id="namen_placila" placeholder="npr. Vrtnarske storitve"><div id="f_namen" class="feedback"></div></div>
+        <div><label>Znesek (€)</label><input id="znesek" type="number" step="0.01" placeholder="npr. 29.90"><div id="f_znesek" class="feedback"></div></div>
+        <div><label>Rok plačila (ni nujno)</label><input id="rok_placila" type="date"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <button class="btn primary" id="btn-gen">Ustvari QR</button>
+      <button class="btn ghost" id="btn-dl" disabled>Prenesi PNG</button>
+      <button class="btn ghost" id="btn-clear">Počisti</button>
+    </section>
+
+    <section class="card">
+      <div class="qrbox">
+        <canvas id="qr"></canvas>
+        <div id="status" class="muted">Še ni generirano.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="text-align:center;color:#94a3b8;font-size:12px;padding:10px;">UPN QR · Duša 2025</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+function upnEncode(data){
+  function pad(v,len){v=v||'';return v.toString().substring(0,len).padEnd(len,' ');}
+  const lines=[
+    'UPNQR',''.padEnd(33),''.padEnd(33),
+    pad(data.ime_placnika,33),pad(data.ulica_placnika,33),pad(data.kraj_placnika,33),
+    pad(data.znesek.toFixed(2).replace('.',','),11),' '.padEnd(4),
+    pad(data.koda_namena,4),pad(data.namen_placila,42),
+    pad(data.rok_placila?data.rok_placila.toISOString().slice(0,10):'',10),
+    pad(data.IBAN_prejemnika,34),pad(data.referenca_prejemnika,26),
+    pad(data.ime_prejemnika,33),pad(data.ulica_prejemnika,33),pad(data.kraj_prejemnika,33)
+  ];
+  return lines.join('\n');
+}
+
+const $=id=>document.getElementById(id);
+function validRef(ref){return /^SI/i.test(ref.trim());}
+const refInput=$('referenca_prejemnika');const noRef=$('noRef');
+noRef.addEventListener('change',()=>{refInput.disabled=noRef.checked;if(noRef.checked)refInput.value='';});
+
+function mark(el,msg,ok){const fb=$('f_'+el.id.split('_')[0])||$('f_'+el.id);if(!ok){el.classList.add('error');el.classList.remove('success');if(fb)fb.innerHTML='<span class=errText>'+msg+'</span>';}else{el.classList.add('success');el.classList.remove('error');if(fb)fb.innerHTML='<span class=okText>✓</span>';}};
+
+function buildUPN(){return{polog:false,dvig:false,ime_placnika:'',ulica_placnika:'',kraj_placnika:'',
+znesek:parseFloat($('znesek').value||'0')||0,koda_namena:$('koda_namena').value||'OTHR',
+namen_placila:$('namen_placila').value.trim(),rok_placila:$('rok_placila').value?new Date($('rok_placila').value):undefined,
+IBAN_prejemnika:$('IBAN_prejemnika').value.replace(/\s+/g,'').toUpperCase(),
+referenca_prejemnika:noRef.checked?'':refInput.value.trim().toUpperCase(),
+ime_prejemnika:$('ime_prejemnika').value.trim(),ulica_prejemnika:$('ulica_prejemnika').value.trim(),kraj_prejemnika:$('kraj_prejemnika').value.trim()};}
+
+function validate(u){
+  let ok=true;
+  function req(id,msg,cond){const e=$(id);if(!cond){mark(e,msg,false);ok=false;}else mark(e,'',true);}
+  req('ime_prejemnika','Obvezno polje',u.ime_prejemnika);
+  req('IBAN_prejemnika','Obvezno polje',u.IBAN_prejemnika);
+  req('namen_placila','Obvezno polje',u.namen_placila);
+  req('znesek','Vpiši znesek > 0',u.znesek>0);
+  if(!noRef.checked && u.referenca_prejemnika && !validRef(u.referenca_prejemnika)){mark(refInput,'Referenca mora začeti s SI',false);ok=false;}else if(!noRef.checked){mark(refInput,'',true);}
+  return ok;
+}
+
+function generate(){
+  const s=$('status');const u=buildUPN();
+  if(!validate(u)){s.innerHTML='<span class=err>Popravi označena polja.</span>';return;}
+  try{
+    const payload=upnEncode(u);
+    const qr=qrcode(0,'M');qr.addData(payload);qr.make();
+    const canvas=$('qr');const ctx=canvas.getContext('2d');
+    const size=Math.min(canvas.parentElement.offsetWidth,canvas.parentElement.offsetHeight);
+    canvas.width=size;canvas.height=size;
+    const count=qr.getModuleCount();const tile=size/count;
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
+    for(let r=0;r<count;r++){for(let c=0;c<count;c++){ctx.fillStyle=qr.isDark(r,c)?'#000':'#fff';ctx.fillRect(c*tile,r*tile,tile,tile);}}
+    s.innerHTML='<span class=ok>Koda ustvarjena ✓</span>';$('btn-dl').disabled=false;
+  }catch(e){s.innerHTML='<span class=err>'+e+'</span>';console.error(e);}
+}
+
+function downloadPng(){const a=document.createElement('a');a.href=$('qr').toDataURL('image/png');a.download='UPN-QR.png';a.click();}
+function clearForm(){document.querySelectorAll('input').forEach(i=>{i.value='';i.classList.remove('error','success');});document.querySelectorAll('.feedback').forEach(f=>f.innerHTML='');$('status').textContent='Počiščeno.';const ctx=$('qr').getContext('2d');ctx.clearRect(0,0,$('qr').width,$('qr').height);$('btn-dl').disabled=true;}
+
+$('btn-gen').addEventListener('click',generate);
+$('btn-dl').addEventListener('click',downloadPng);
+$('btn-clear').addEventListener('click',clearForm);
+</script>
+</body>
+</html>
